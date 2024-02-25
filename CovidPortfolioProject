@@ -1,0 +1,296 @@
+select * from 
+master..CovidDeaths11 
+ORDER by  3,4
+
+-- select * from 
+-- CovidVaccinations1
+-- order by 3,4
+
+-- select data that we are going to use 
+
+select location , date, total_cases, new_cases, total_deaths, population
+from master..CovidDeaths11 
+order by 1,2 
+
+-- looking at total cases vs total deaths 
+-- shows the liklihood of dying if u contract covid in your country 
+
+select location , date, total_cases, total_deaths, (total_deaths / total_cases) * 100 as DeathPercentage 
+from master..CovidDeaths11 
+order by 1,2 
+
+select location , date, total_cases, total_deaths, (total_deaths / total_cases) * 100 as DeathPercentage 
+from master..CovidDeaths11 
+where location like '%states%'
+order by 1,2 
+
+
+
+-- looking at the total cases vs the population 
+-- shows what percentage og population got covid 
+
+
+select location , date, total_cases, population, ( total_cases / population )*100 as CovidPercentage 
+from master..CovidDeaths11 
+-- where location like '%states%'
+order by 1,2 
+
+
+-- looking at countries with highiest infection rate compared tp population 
+
+
+select location ,max(total_cases) as highestInfectionCount , population, max(( total_cases / population ))*100 as percentPopulationInfected  
+from master..CovidDeaths11 
+-- where location like '%states%'
+group by location , population 
+order by percentPopulationInfected DESC 
+
+
+-- in jordan 
+
+select location ,max(total_cases) as highestInfectionCount , population, max(( total_cases / population ))*100 as percentPopulationInfected  
+from master..CovidDeaths11 
+where location like '%jordan%'
+group by location , population 
+-- order by percentPopulationInfected DESC 
+
+
+-- showing the countries with the highest death count per population 
+
+select location , max(total_deaths) as totalDeathCount
+from master..CovidDeaths11 
+-- where location like '%states%'
+group by location 
+order by totalDeathCount DESC 
+
+
+select location , max(total_deaths) as totalDeathCount
+from master..CovidDeaths11 
+where continent is not null  -- some issues in the data 
+-- where location like '%states%'
+group by location 
+order by totalDeathCount DESC 
+
+
+-- lets break things by continent 
+
+select continent , max(total_deaths) as totalDeathCount
+from master..CovidDeaths11 
+where continent is not null  -- some issues in the data 
+-- where location like '%states%'
+group by continent 
+order by totalDeathCount DESC -- this is not accurate 
+
+
+-- i did not understand what he did, but this is accurate  
+
+
+select location , max(total_deaths) as totalDeathCount
+from master..CovidDeaths11 
+where continent is null  -- some issues in the data 
+-- where location like '%states%'
+group by location 
+order by totalDeathCount DESC -- this is not accurate 
+
+
+
+-- totalcasecount  
+
+
+select location , max(total_cases) as TotalCasesCount
+from master..CovidDeaths11 
+where continent is null  -- some issues in the data 
+-- where location like '%states%'
+group by location 
+order by TotalCasesCount DESC -- this is not accurate 
+
+
+
+
+-- showing the continats with hightest deathCount
+
+
+select continent , max(total_deaths) as totalDeathCount
+from master..CovidDeaths11 
+where continent is not null  -- some issues in the data 
+-- where location like '%states%'
+group by continent 
+order by totalDeathCount DESC -- this is not accurate 
+
+
+-- global numbers 
+
+select  date, SUM(new_cases) as total_cases , SUM(new_deaths) as total_death, SUM(new_deaths) / sum(new_cases) * 100 as deathpercentage --total_cases, total_deaths, (total_deaths / total_cases) * 100 as DeathPercentage 
+from master..CovidDeaths11 
+-- where location like '%states%'
+where continent is not null 
+GROUP by date
+order by 1,2 
+
+
+select  SUM(new_cases) as total_cases , SUM(new_deaths) as total_death, SUM(new_deaths) / sum(new_cases) * 100 as deathpercentage --total_cases, total_deaths, (total_deaths / total_cases) * 100 as DeathPercentage 
+from master..CovidDeaths11 
+-- where location like '%states%'
+where continent is not null 
+--GROUP by date
+order by 1,2 
+
+select * from CovidVaccinations1 
+
+
+
+-- total population vs vaccinations 
+
+select * 
+from master..CovidDeaths11 dea
+join CovidVaccinations1 vac
+on dea.location = vac.location 
+and dea.date = vac.date 
+
+select dea.continent , dea.location, dea.date,  dea.population , vac.new_vaccinations
+from master..CovidDeaths11 dea
+join CovidVaccinations1 vac
+on dea.location = vac.location 
+and dea.date = vac.date 
+where dea.continent is not null 
+order by 2,3
+
+
+
+
+select dea.continent , dea.location, dea.date,  dea.population , vac.new_vaccinations , 
+sum(vac.new_vaccinations) over (partition by dea.location order by dea.location , dea.date) as RollingPeopleVaccinated 
+from master..CovidDeaths11 dea
+join CovidVaccinations1 vac
+on dea.location = vac.location 
+and dea.date = vac.date 
+where dea.continent is not null 
+order by 2,3
+
+
+
+
+select dea.continent , dea.location, dea.date,  dea.population , vac.new_vaccinations , 
+sum(vac.new_vaccinations) over (partition by dea.location order by dea.location , dea.date) as RollingPeopleVaccinated 
+--, (RollingPeopleVaccinated / population)*100 -- you cant use a coloum you just created, here you should use CTE , Temp_table 
+from master..CovidDeaths11 dea
+join CovidVaccinations1 vac
+on dea.location = vac.location 
+and dea.date = vac.date 
+where dea.continent is not null 
+order by 2,3
+
+
+-- use CTE 
+
+with popVsVac ( continats , location , date , population , new_vaccinations , RollingPeopleVaccinated)
+
+as 
+(
+select dea.continent , dea.location, dea.date,  dea.population , vac.new_vaccinations , 
+sum(vac.new_vaccinations) over (partition by dea.location order by dea.location , dea.date) as RollingPeopleVaccinated 
+--, (RollingPeopleVaccinated / population)*100 -- you cant use a coloum you just created, here you should use CTE , Temp_table 
+from master..CovidDeaths11 dea
+join CovidVaccinations1 vac
+on dea.location = vac.location 
+and dea.date = vac.date 
+where dea.continent is not null 
+-- order by 2,3
+)
+
+
+select * , (RollingPeopleVaccinated / population) *100  from popVsVac 
+
+
+
+
+-- select dea.continent , sum(population) , sum(total_vaccinations)
+-- from master..CovidDeaths11 dea
+-- join CovidVaccinations1 vac
+-- on dea.location = vac.location 
+-- and dea.date = vac.date 
+-- where dea.continent is not null 
+-- group by dea.continent   kont ajrb eshe bs ma zbt 
+
+
+-- i need to practic more about partition by -- 
+
+-- temp_table 
+
+
+  -- if you want to change somethings in the tabel use drop (to avoid (the tabel is already in the database))
+
+drop table if EXISTS #PercentagePopulationVaccinated
+create table #PercentagePopulationVaccinated 
+(
+    Continent nvarchar(225),
+    Location nvarchar (225),
+    Date DATETIME,
+    population NUMERIC,
+    new_vaccinations NUMERIC,
+    RollingPeopleVaccinated NUMERIC
+)
+
+
+insert into #PercentagePopulationVaccinated
+
+select dea.continent , dea.location, dea.date,  dea.population , vac.new_vaccinations , 
+sum(vac.new_vaccinations) over (partition by dea.location order by dea.location , dea.date) as RollingPeopleVaccinated 
+--, (RollingPeopleVaccinated / population)*100 -- you cant use a coloum you just created, here you should use CTE , Temp_table 
+from master..CovidDeaths11 dea
+join CovidVaccinations1 vac
+on dea.location = vac.location 
+and dea.date = vac.date 
+--where dea.continent is not null 
+-- order by 2,3
+
+
+select * , (RollingPeopleVaccinated / population) *100  from  #PercentagePopulationVaccinated
+order by 2,3
+
+
+
+
+-- creating view to store date for later visualizations 
+
+create view PercentagePopulationVaccinated as 
+
+select dea.continent , dea.location, dea.date,  dea.population , vac.new_vaccinations , 
+sum(vac.new_vaccinations) over (partition by dea.location order by dea.location , dea.date) as RollingPeopleVaccinated 
+--, (RollingPeopleVaccinated / population)*100 -- you cant use a coloum you just created, here you should use CTE , Temp_table 
+from master..CovidDeaths11 dea
+join CovidVaccinations1 vac
+on dea.location = vac.location 
+and dea.date = vac.date 
+where dea.continent is not null 
+-- order by 2,3
+
+
+-- view its like to create a permenent table from a table  
+
+select * from PercentagePopulationVaccinated
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
